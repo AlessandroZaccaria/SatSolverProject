@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>K-clique solver</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <script defer src="/static/app.js"></script>
+  </head>
+  <body>
+    <h1>K-clique solver</h1>
+
+    <section id="uploadPane">
+      <div id="box">
+        <input type="file" id="file" name="graph" accept=".txt" required />
+        <button id="go">upload</button>
+      </div>
+      <p id="hint">it takes a graph header &lt;n&gt; &lt;m&gt; &lt;k&gt; followed by m edge lines,<br />runs the SAT solver and shows a clique or UNSAT</p>
+    </section>
+
+    <section id="resultPane" class="hidden">
+      <div id="card">
+        <svg id="viz" width="800" height="500"></svg>
+        <pre id="answer"></pre>
+        <button id="again">new graph</button>
+      </div>
+    </section>
+  </body>
+</html>
