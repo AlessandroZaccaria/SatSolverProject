@@ -85,7 +85,9 @@ def solve():
     # 6) Check (un)sat case‑insensitively -----------------------------------
     up_out = solver_out.upper()
     if "UNSAT" in up_out:
-        return jsonify({"sat": False, "clique": []})
+        return jsonify(
+            {"sat": False, "clique": [], "points": list(points), "edges": edges}
+        )
 
     if "SAT" not in up_out:
         # Not obviously SAT or UNSAT – treat as unknown/error
