@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Graph Clique SAT Checker</title>
+    <!-- Tailwind via CDN for rapid prototyping -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center"
+    style="padding: 1.5vh">
+    <!-- Card -->
+    <div class="w-full rounded-2xl shadow-xl bg-white p-8 space-y-6 flex flex-col" style="height: 97vh">
+        <header class="text-center">
+            <h1 class="text-3xl font-bold tracking-tight text-slate-800">
+                Clique SAT&nbsp;Solver
+            </h1>
+            <p class="mt-2 text-sm text-slate-500">
+                Drag‑and‑drop a graph <code>.txt</code> file or click to browse. The
+                server will tell you whether the instance is SAT and list the clique
+                vertices.
+            </p>
+        </header>
+
+        <!-- Drop zone -->
+        <label id="drop-area" for="file-input" style="height: 100%;"
+            class="flex flex-col items-center justify-center w-full border-2 border-dashed border-slate-300 rounded-xl cursor-pointer transition-colors duration-150 ease-in-out hover:border-slate-400 focus:outline-none">
+            <input id="file-input" type="file" accept=".txt" class="hidden" />
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-slate-400 mb-3" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M3 15v4a2 2 0 002 2h14a2 2 0 002-2v-4m-4-4l-4-4m0 0l-4 4m4-4v12" />
+            </svg>
+            <p class="text-slate-600">
+                <span class="font-medium">Drop file</span> or
+                <span class="underline">browse</span>
+            </p>
+            <p class="text-xs text-slate-400 mt-1">Accepted format: .txt</p>
+        </label>
+
+        <!-- Result Panel -->
+        <div id="result-panel" class="hidden rounded-xl border border-slate-200 p-4 space-y-2"
+            style="margin-top: 24px !important; margin-bottom: 0;">
+            <p id="status" class="text-base font-medium"></p>
+            <ul id="clique-list" class="flex flex-wrap gap-2"></ul>
+        </div>
+    </div>
+
+    <script>
+        const dropArea = document.getElementById("drop-area");
+        const fileInput = document.getElementById("file-input");
+        const resultPanel = document.getElementById("result-panel");
+        const statusText = document.getElementById("status");
+        const cliqueList = document.getElementById("clique-list");
+
+        // --- helpers ---------------------------------------------------------
+        function highlight(on) {
+            dropArea.classList.toggle("border-sky-400", on);
+            dropArea.classList.toggle("ring-2", on);
+            dropArea.classList.toggle("ring-sky-200", on);
+        }
+
+        function resetDropArea() {
+            dropArea.innerHTML = "";                      // remove existing children
+            const hello = document.createElement("div");  // create new <div>
+            hello.textContent = "hello,world";
+            dropArea.appendChild(hello);                  // insert it
+        }
+        function showResult({ sat, clique, message }) {
+            statusText.textContent = sat ? "✅ SATISFIABLE" : "❌ UNSATISFIABLE";
+            statusText.className = sat
+                ? "text-green-600 font-semibold"
+                : "text-red-600 font-semibold";
+            resetDropArea(); // Reset the drop area to its original state
+            // Clear previous list
+            cliqueList.innerHTML = "";
+            if (sat && clique?.length) {
+                clique.forEach((v) => {
+                    const li = document.createElement("li");
+                    li.textContent = v;
+                    li.className =
+                        "px-2 py-0.5 rounded-lg bg-sky-100 text-sky-700 text-sm font-mono";
+                    cliqueList.appendChild(li);
+                });
+            }
+            if (message) {
+                const note = document.createElement("p");
+                note.textContent = message;
+                note.className = "text-xs text-slate-400";
+                cliqueList.after(note);
+            }
+            resultPanel.classList.remove("hidden");
+        }
+
+        function upload(file) {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            statusText.textContent = "Solving…";
+            statusText.className = "text-slate-600 font-medium animate-pulse";
+            resultPanel.classList.remove("hidden");
+            cliqueList.innerHTML = "";
+
+            fetch("/solve", {
+                method: "POST",
+                body: formData,
+            })
+                .then((r) => r.json())
+                .then((data) => {
+                    showResult(data);
+                })
+                .catch((err) => {
+                    console.error(err);
+                    showResult({
+                        sat: false,
+                        clique: [],
+                        message: "Error communicating with server.",
+                    });
+                });
+        }
+
+        // --- drag-n-drop / file selection handlers --------------------------
+        ["dragenter", "dragover", "dragleave", "drop"].forEach((evt) => {
+            dropArea.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                highlight(true);
+            });
+        });
+
+        dropArea.addEventListener("drop", (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length) {
+                upload(files[0]);
+            }
+        });
+        fileInput.addEventListener("change", (e) => {
+            upload(e.target.files[0]);
+        });
+    </script>
+</body>
+
+</html>
