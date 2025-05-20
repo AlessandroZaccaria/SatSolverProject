@@ -21,6 +21,7 @@ app = Flask(__name__, static_folder=str(ROOT))
 @app.route("/")
 def home():
     """Serve the Tailwind GUI."""
+    assert type(app.static_folder) == str
     return send_from_directory(app.static_folder, "index.html")
 
 
@@ -36,6 +37,9 @@ def solve():
     if not file:
         return jsonify({"error": "No file uploaded"}), 400
 
+    assert file is not None
+    assert file.content_type == "text/plain"
+    edges = []
     # 2) Save the file to a temp dir so the solver can read it --------------
     with tempfile.TemporaryDirectory() as tmpdir:
         graph_path = pathlib.Path(tmpdir) / "graph.txt"
@@ -51,6 +55,15 @@ def solve():
             text=True,
             cwd=ROOT,
         )
+        with open(graph_path, "r") as f:
+            _, lines, _ = f.readline().split()
+            for _ in range(int(lines)):
+                a, b = f.readline().split()
+                edges.append((int(a), int(b)))
+        points = set()
+        for a, b in edges:
+            points.add(a)
+            points.add(b)
 
     # 4) Merge stdout + stderr for easier pattern matching ------------------
     solver_out = (result.stdout or "") + (result.stderr or "")
@@ -98,7 +111,9 @@ def solve():
         # Parsing failed – leave clique empty but still SAT
         clique = []
 
-    return jsonify({"sat": True, "clique": clique})
+    return jsonify(
+        {"sat": True, "clique": clique, "points": list(points), "edges": edges}
+    )
 
 
 # ------------------------------------------------------------

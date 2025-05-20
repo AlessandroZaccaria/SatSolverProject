@@ -8,6 +8,8 @@
     <title>Graph Clique SAT Checker</title>
     <!-- Tailwind via CDN for rapid prototyping -->
     <script src="https://cdn.tailwindcss.com"></script>
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/graphology/0.26.0/graphology.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/3.0.1/sigma.min.js"></script>
 </head>
 
 <body class="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center"
@@ -55,7 +57,62 @@
         const resultPanel = document.getElementById("result-panel");
         const statusText = document.getElementById("status");
         const cliqueList = document.getElementById("clique-list");
+function getColor(){ 
+  return '#' + [...Array(3)]
+        .map(() => (128 + Math.floor(Math.random() * 90))
+                    .toString(16)
+                    .padStart(2, '0'))
+        .join('');
+}
+        // --- inizio merda dei grafi ---
+        function grafi(edges, points) {
+        const g = new graphology.Graph();
+        // for every point, add a node to the graph 
+        points.forEach((point,i) => {
+          g.addNode(point, {x: Math.cos(Math.PI *2*i/points.length), y:Math.sin(Math.PI *2*i/points.length), size: 10, label: point , color:getColor()});
+        });
+        // for every edge, add an edge to the graph 
+        edges.forEach((edge) => {
+            g.addEdge(edge[0], edge[1]);
+        });
 
+        /* ---------- renderer ---------- */
+            const container = document.getElementById("sigma-container");
+            const renderer  = new Sigma(g, container);
+
+        /* ---------- internal state ---------- */
+        let hovered = null;           // node id hovered (string | null)
+        let neighbours = null;        // Set<string> of neighbour ids
+
+        /* ---------- helpers ---------- */
+        function setHovered(nodeId){
+          hovered    = nodeId || null;
+          neighbours = nodeId ? new Set(g.neighbors(nodeId)) : null;
+          renderer.refresh({skipIndexation:true}); // run reducers
+          renderer.startForceAtlas({iterations: 0}); // re-layout
+        }
+
+        /* ---------- reducers ---------- */
+        renderer.setSetting("nodeReducer", (id, attrs) => {
+          if(!hovered) return attrs;                             // nothing hovered
+          if(id === hovered || neighbours.has(id)) return attrs; // keep neighbour
+          return {...attrs, label:"", color:"#e0e0e0"};          // fade the rest
+        });
+
+        renderer.setSetting("edgeReducer", (eid, attrs) => {
+          if(!hovered) return attrs;
+          const [s,t] = g.extremities(eid);
+          return (s===hovered||t===hovered||neighbours.has(s)||neighbours.has(t))
+            ? attrs
+            : {...attrs, hidden:true};
+        });
+
+        /* ---------- events ---------- */
+        renderer.on("enterNode", ({node}) => setHovered(node));
+        renderer.on("leaveNode", ()            => setHovered(null));
+        renderer.on("clickStage", ()           => setHovered(null)); // reset on empty click
+        }
+        // --- end of merda dei grafi ---
         // --- helpers ---------------------------------------------------------
         function highlight(on) {
             dropArea.classList.toggle("border-sky-400", on);
@@ -63,18 +120,23 @@
             dropArea.classList.toggle("ring-sky-200", on);
         }
 
-        function resetDropArea() {
+        function showGraph(edges, points) {
             dropArea.innerHTML = "";                      // remove existing children
-            const hello = document.createElement("div");  // create new <div>
-            hello.textContent = "hello,world";
-            dropArea.appendChild(hello);                  // insert it
+            dropArea.classList.remove("border-dashed"); // remove dashed border
+            const sigma = document.createElement("div");  // create new <div>
+            sigma.id = "sigma-container";                // set id
+            sigma.style.height = "100%";               // set height
+            sigma.style.width = "100%";                // set width
+            dropArea.appendChild(sigma);                  // insert it
+            grafi(edges, points); // call the graph function
+
         }
-        function showResult({ sat, clique, message }) {
+        function showResult({ sat, clique, message, edges, points }) {
             statusText.textContent = sat ? "✅ SATISFIABLE" : "❌ UNSATISFIABLE";
             statusText.className = sat
                 ? "text-green-600 font-semibold"
                 : "text-red-600 font-semibold";
-            resetDropArea(); // Reset the drop area to its original state
+            showGraph(edges, points); // Call the graph function
             // Clear previous list
             cliqueList.innerHTML = "";
             if (sat && clique?.length) {
