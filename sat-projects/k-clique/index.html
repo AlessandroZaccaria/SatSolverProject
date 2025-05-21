@@ -8,14 +8,13 @@
     <title>Graph Clique SAT Checker</title>
     <!-- Tailwind via CDN for rapid prototyping -->
     <script src="https://cdn.tailwindcss.com"></script>
- <script src="https://cdnjs.cloudflare.com/ajax/libs/graphology/0.26.0/graphology.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/3.0.1/sigma.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/graphology-library/dist/graphology-library.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/graphology/0.26.0/graphology.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/3.0.1/sigma.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/graphology-library/dist/graphology-library.min.js"></script>
 </head>
 
 <body class="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center"
     style="padding: 1.5vh">
-    <!-- Card -->
     <div class="w-full rounded-2xl shadow-xl bg-white p-8 space-y-6 flex flex-col" style="height: 97vh">
         <header class="text-center">
             <h1 class="text-3xl font-bold tracking-tight text-slate-800">
@@ -28,7 +27,7 @@
             </p>
         </header>
 
-        <!-- Drop zone -->
+        <!-- Drop squre -->
         <label id="drop-area" for="file-input" style="height: 100%;"
             class="flex flex-col items-center justify-center w-full border-2 border-dashed border-slate-300 rounded-xl cursor-pointer transition-colors duration-150 ease-in-out hover:border-slate-400 focus:outline-none">
             <input id="file-input" type="file" accept=".txt" class="hidden" />
@@ -58,63 +57,63 @@
         const resultPanel = document.getElementById("result-panel");
         const statusText = document.getElementById("status");
         const cliqueList = document.getElementById("clique-list");
-function getColor(){ 
-  return '#' + [...Array(3)]
-        .map(() => (128 + Math.floor(Math.random() * 90))
+        function getColor() {
+            return '#' + [...Array(3)]
+                .map(() => (128 + Math.floor(Math.random() * 90))
                     .toString(16)
                     .padStart(2, '0'))
-        .join('');
-}
-        // --- inizio merda dei grafi ---
-        function grafi(edges, points) {
-        const g = new graphology.Graph();
-        // for every point, add a node to the graph 
-        points.forEach((point,i) => {
-          g.addNode(point, {x: Math.cos(Math.PI *2*i/points.length), y:Math.sin(Math.PI *2*i/points.length), size: 10, label: point , color:getColor()});
-        });
-        // for every edge, add an edge to the graph 
-        edges.forEach((edge) => {
-            g.addEdge(edge[0], edge[1]);
-        });
+                .join('');
+        }
+        // --- inizio roba dei grafi ---
+        function grafi(edges, points, clique = []) {
+            const cliqueSet = new Set(clique.map(String));
+            const g = new graphology.Graph();
+            points.forEach((point, i) => {
+                g.addNode(point, { x: Math.cos(Math.PI * 2 * i / points.length), y: Math.sin(Math.PI * 2 * i / points.length), size: 10, label: point, color: cliqueSet.has(String(point)) ? "#ff3333" : getColor() });
+            });
+            edges.forEach((edge) => {
+                g.addEdge(edge[0], edge[1]);
+            });
 
-        /* ---------- renderer ---------- */
-    const fa2Settings = graphologyLibrary.layoutForceAtlas2.inferSettings(g);
-    graphologyLibrary.layoutForceAtlas2.assign(g, {iterations:200, settings:fa2Settings})
+            /* ---------- renderer ---------- */
+            const fa2Settings = graphologyLibrary.layoutForceAtlas2.inferSettings(g);
+            graphologyLibrary.layoutForceAtlas2.assign(g, { iterations: 200, settings: fa2Settings })
             const container = document.getElementById("sigma-container");
-          const renderer  = new Sigma(g, container, {labelThreshold:0});
+            const renderer = new Sigma(g, container, { labelThreshold: 0 });
 
-        /* ---------- internal state ---------- */
-        let hovered = null;           // node id hovered (string | null)
-        let neighbours = null;        // Set<string> of neighbour ids
+            /* ---------- internal state ---------- */
+            let hovered = null;
+            let neighbours = null;
 
-        /* ---------- helpers ---------- */
-        function setHovered(nodeId){
-          hovered    = nodeId || null;
-          neighbours = nodeId ? new Set(g.neighbors(nodeId)) : null;
-          renderer.refresh({skipIndexation:true}); // run reducers
+            /* ---------- helpers ---------- */
+            function setHovered(nodeId) {
+                hovered = nodeId || null;
+                neighbours = nodeId ? new Set(g.neighbors(nodeId)) : null;
+                renderer.refresh({ skipIndexation: true });
+            }
+
+            /* ---------- reducers ---------- */
+            renderer.setSetting("nodeReducer", (id, attrs) => {
+                if (cliqueSet.has(String(id))) return attrs; // keep clique
+                if (!hovered) return attrs;                             // nothing hovered
+                if (id === hovered || neighbours.has(id)) return attrs; // keep neighbour
+                return { ...attrs, label: "", color: "#e0e0e0" };          // fade the rest
+            });
+
+            renderer.setSetting("edgeReducer", (eid, attrs) => {
+                if (!hovered) return attrs;
+                const [s, t] = g.extremities(eid);
+                return (s === hovered || t === hovered || neighbours.has(s) || neighbours.has(t))
+                    ? attrs
+                    : { ...attrs, hidden: true };
+            });
+
+            /* ---------- events ---------- */
+            renderer.on("enterNode", ({ node }) => setHovered(node));
+            renderer.on("leaveNode", () => setHovered(null));
+            renderer.on("clickStage", () => setHovered(null)); // reset on empty click
         }
-
-        /* ---------- reducers ---------- */
-        renderer.setSetting("nodeReducer", (id, attrs) => {
-          if(!hovered) return attrs;                             // nothing hovered
-          if(id === hovered || neighbours.has(id)) return attrs; // keep neighbour
-          return {...attrs, label:"", color:"#e0e0e0"};          // fade the rest
-        });
-
-        renderer.setSetting("edgeReducer", (eid, attrs) => {
-          if(!hovered) return attrs;
-          const [s,t] = g.extremities(eid);
-          return (s===hovered||t===hovered||neighbours.has(s)||neighbours.has(t))
-            ? attrs
-            : {...attrs, hidden:true};
-        });
-
-        /* ---------- events ---------- */
-        renderer.on("enterNode", ({node}) => setHovered(node));
-        renderer.on("leaveNode", ()            => setHovered(null));
-        renderer.on("clickStage", ()           => setHovered(null)); // reset on empty click
-        }
-        // --- end of merda dei grafi ---
+        // --- end of roba dei grafi ---
         // --- helpers ---------------------------------------------------------
         function highlight(on) {
             dropArea.classList.toggle("border-sky-400", on);
@@ -122,15 +121,15 @@ function getColor(){
             dropArea.classList.toggle("ring-sky-200", on);
         }
 
-        function showGraph(edges, points) {
-            dropArea.innerHTML = "";                      // remove existing children
-            dropArea.classList.remove("border-dashed"); // remove dashed border
-            const sigma = document.createElement("div");  // create new <div>
-            sigma.id = "sigma-container";                // set id
-            sigma.style.height = "100%";               // set height
-            sigma.style.width = "100%";                // set width
-            dropArea.appendChild(sigma);                  // insert it
-            grafi(edges, points); // call the graph function
+        function showGraph(edges, points, clique = []) {
+            dropArea.innerHTML = "";
+            dropArea.classList.remove("border-dashed");
+            const sigma = document.createElement("div");
+            sigma.id = "sigma-container";
+            sigma.style.height = "100%";
+            sigma.style.width = "100%";
+            dropArea.appendChild(sigma);
+            grafi(edges, points, clique);
 
         }
         function showResult({ sat, clique, message, edges, points }) {
@@ -138,7 +137,7 @@ function getColor(){
             statusText.className = sat
                 ? "text-green-600 font-semibold"
                 : "text-red-600 font-semibold";
-            showGraph(edges, points); // Call the graph function
+            showGraph(edges, points, clique) // Call the graph function
             // Clear previous list
             cliqueList.innerHTML = "";
             if (sat && clique?.length) {
@@ -186,7 +185,7 @@ function getColor(){
                 });
         }
 
-        // --- drag-n-drop / file selection handlers --------------------------
+        // --- event listeners ---
         ["dragenter", "dragover", "dragleave", "drop"].forEach((evt) => {
             dropArea.addEventListener(evt, (e) => {
                 e.preventDefault();
