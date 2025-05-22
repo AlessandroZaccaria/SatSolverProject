@@ -71,9 +71,14 @@
             points.forEach((point, i) => {
                 g.addNode(point, { x: Math.cos(Math.PI * 2 * i / points.length), y: Math.sin(Math.PI * 2 * i / points.length), size: 10, label: point, color: cliqueSet.has(String(point)) ? "#ff3333" : getColor() });
             });
-            edges.forEach((edge) => {
-                g.addEdge(edge[0], edge[1]);
+            edges.forEach(([u, v]) => {
+                const inClique = cliqueSet.has(String(u)) && cliqueSet.has(String(v));
+                g.addEdge(u, v, {
+                    color: inClique ? "#ff3333" : "#b0b0b0",
+                    size: inClique ? 2 : 1,
+                });
             });
+
 
             /* ---------- renderer ---------- */
             const fa2Settings = graphologyLibrary.layoutForceAtlas2.inferSettings(g);
