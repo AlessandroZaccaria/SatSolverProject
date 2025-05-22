@@ -20,7 +20,7 @@
             <h1 class="text-3xl font-bold tracking-tight text-slate-800">
                 Clique SAT&nbsp;Solver
             </h1>
-            <p class="mt-2 text-sm text-slate-500">
+            <p class="mt-2 text-sm text-slate-600">
                 Drag‑and‑drop a graph <code>.txt</code> file or click to browse. The
                 server will tell you whether the instance is SAT and list the clique
                 vertices.
@@ -29,7 +29,7 @@
 
         <!-- Drop squre -->
         <label id="drop-area" for="file-input" style="height: 100%;"
-            class="flex flex-col items-center justify-center w-full border-2 border-dashed border-slate-300 rounded-xl cursor-pointer transition-colors duration-150 ease-in-out hover:border-slate-400 focus:outline-none">
+            class="flex flex-col items-center justify-center w-full border-2 border-dashed border-slate-400 rounded-xl cursor-pointer transition-colors duration-150 ease-in-out hover:border-slate-400 focus:outline-none">
             <input id="file-input" type="file" accept=".txt" class="hidden" />
             <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-slate-400 mb-3" fill="none"
                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -99,10 +99,9 @@
 
             /* ---------- reducers ---------- */
             renderer.setSetting("nodeReducer", (id, attrs) => {
-                if (cliqueSet.has(String(id))) return attrs; // keep clique
-                if (!hovered) return attrs;                             // nothing hovered
-                if (id === hovered || neighbours.has(id)) return attrs; // keep neighbour
-                return { ...attrs, label: "", color: "#e0e0e0" };          // fade the rest
+                if (!hovered) return attrs;
+                if (id === hovered || neighbours.has(id)) return attrs;
+                return { ...attrs, label: "", color: "#e0e0e0" };
             });
 
             renderer.setSetting("edgeReducer", (eid, attrs) => {
