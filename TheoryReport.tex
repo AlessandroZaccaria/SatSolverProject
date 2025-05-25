@@ -1,0 +1,139 @@
+\UseRawInputEncoding
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{listings}
+
+\definecolor{pykeyword}{RGB}{0,0,180}
+\definecolor{pystring}{RGB}{190,30,30}
+\definecolor{pycomment}{RGB}{80,110,80}
+
+\lstdefinestyle{py}{
+  language=Python,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{pykeyword}\bfseries,
+  stringstyle=\color{pystring},
+  commentstyle=\color{pycomment}\itshape,
+  showstringspaces=false,
+  frame=single,
+  breaklines=true
+}
+
+\title{Homework 6 -- Theory of Computation\\[2mm]\large Encoding the $k$-Clique Problem into SAT}
+\author{Alessandro \and Lorenzo \and Luca}
+\date{}
+
+\begin{document}
+\maketitle
+
+\paragraph*{Introduction.}
+Graph-based social networks ask whether a group of $k$ people are \emph{all} mutually connected.  
+Given a graph $G=(V,E)$ and an integer $k$, we translate the question  
+``does $G$ contain a $k$-clique?'' into a propositional-logic (CNF) formula so that any SAT solver can answer it.
+
+\subsection*{Encoding overview}
+For every vertex $v\in\{1,\dots,n\}$ and every position $j\in\{1,\dots,k\}$ we introduce the Boolean variable
+\[
+x_{v,j}= \text{``vertex $v$ occupies position $j$''.}
+\]
+Three clause families enforce:
+
+\begin{enumerate}
+  \item[\textbf{A.}] Each position is filled by exactly one vertex.
+  \item[\textbf{B.}] No vertex appears in two different positions.
+  \item[\textbf{C.}] Vertices that are not adjacent in $G$ cannot be chosen together.
+\end{enumerate}
+
+\bigskip
+
+\section*{Rule A: exactly one vertex per position}
+\textbf{Idea.} Fill every position once, never twice.
+\[
+\boxed{\,
+  \bigwedge_{j=1}^{k}\Bigl(\,\bigvee_{v=1}^{n}x_{v,j}\Bigr)\;
+  \land\;
+  \bigwedge_{j=1}^{k}\;\bigwedge_{1\le u<v\le n}
+  (\lnot x_{u,j}\lor\lnot x_{v,j})\,}
+\]
+
+\begin{lstlisting}[style=py]
+# Rule A -- one vertex per position
+for pos in closed_range(1, k):
+    clauses.append([getVarNumber(vertex=v, slot=pos)
+                    for v in closed_range(1, n)])
+    for v1 in closed_range(1, n - 1):
+        for v2 in closed_range(v1 + 1, n):
+            clauses.append([
+                -getVarNumber(vertex=v1, slot=pos),
+                -getVarNumber(vertex=v2, slot=pos)
+            ])
+\end{lstlisting}
+
+\textit{Explanation.} The first clause for slot $j$ guarantees that some vertex is written there; the binary clauses prevent two different vertices from sharing the same slot, so the occupant is unique.
+
+\section*{Rule B: a vertex can appear only once}
+\textbf{Idea.} Re-using a vertex in two positions is forbidden.
+\[
+\boxed{\,
+  \bigwedge_{v=1}^{n}\;\bigwedge_{1\le j<j'\le k}
+  (\lnot x_{v,j}\lor\lnot x_{v,j'})\,}
+\]
+
+\begin{lstlisting}[style=py]
+# Rule B -- a vertex cannot repeat
+for v in closed_range(1, n):
+    for p1 in closed_range(1, k - 1):
+        for p2 in closed_range(p1 + 1, k):
+            clauses.append([
+                -getVarNumber(vertex=v, slot=p1),
+                -getVarNumber(vertex=v, slot=p2)
+            ])
+\end{lstlisting}
+
+\textit{Explanation.} For every vertex we enumerate each pair of positions and add a clause that blocks the vertex from occupying both, ensuring uniqueness per vertex.
+
+\section*{Rule C: forbid choosing non-adjacent pairs}
+\textbf{Idea.} Two vertices that are not connected by an edge must never both be selected.
+\[
+\boxed{\,
+  \bigwedge_{\{u,v\}\notin E}\;\bigwedge_{\substack{1\le j,j'\le k\\j\neq j'}}(\lnot x_{u,j}\lor\lnot x_{v,j'})\,}
+\]
+
+\begin{lstlisting}[style=py]
+# Rule C -- endpoints of a non-edge cannot both be chosen
+for p1 in closed_range(1, k):
+    for p2 in closed_range(1, k):
+        if p1 == p2:
+            continue
+        for u in closed_range(1, n - 1):
+            for v in closed_range(u + 1, n):
+                if frozenset({u, v}) not in edges:
+                    clauses.append([
+                        -getVarNumber(vertex=u, slot=p1),
+                        -getVarNumber(vertex=v, slot=p2)
+                    ])
+\end{lstlisting}
+
+\textit{Explanation.} Whenever $\{u,v\}\notin E$, these binary clauses forbid assignments that would place $u$ and $v$ in two different positions. Hence every pair among the chosen vertices is connected.
+
+\section*{Why we chose these rules}
+Rules A and B together force the selection of exactly $k$ distinct vertices, matching the size requirement of a $k$-clique.  
+Rule C adds the mutual-adjacency requirement, turning that $k$-set into a clique.
+
+\section*{How the rules deliver the answer}
+\begin{description}
+  \item[If the formula is \emph{satisfiable}.]  
+        Read the vertices that appear in positions $1,\dots,k$ inside a satisfying assignment.  
+        \emph{A} ensures every position is filled, \emph{B} makes them all different, and \emph{C} guarantees that every selected pair is an edge.  
+        So the $k$ vertices form a $k$-clique in $G$.
+  \item[If $G$ already has a $k$-clique.]  
+        Put those $k$ vertices into the $k$ positions and set every other variable to \textit{false}.  
+        This fills every position (satisfying \emph{A}), repeats no vertex (\emph{B}), and violates no non-edge clause (\emph{C}), hence the assignment satisfies the formula.
+\end{description}
+
+Thus the clause set is satisfiable exactly when $G$ contains a $k$-clique.
+
+\section*{What could we have done differently?}
+\end{document}
