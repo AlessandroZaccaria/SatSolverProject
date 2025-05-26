@@ -122,6 +122,57 @@ for p1 in closed_range(1, k):
 Rules A and B together force the selection of exactly $k$ distinct vertices, matching the size requirement of a $k$-clique.  
 Rule C adds the mutual-adjacency requirement, turning that $k$-set into a clique.
 
+\section*{Practical example}
+
+So if we've for example this graph:
+
+\begin{lstlisting}[style=py]
+4 4 2
+1 2
+2 3
+3 4
+4 1
+\end{lstlisting}
+
+Now we will make an example, only listing for k=1. \\
+For the first spot k=1 the first constraint will first make so there is t least a vertex in that position.
+So:
+\begin{lstlisting}[style=py,literate={∨}{{$\vee$}}1]
+pos(1,1) ∨ pos(2,1) ∨ pos(3,1) ∨ pos(4,1)
+\end{lstlisting}
+
+And then the first constrain will assure that there are not 2 vertices at the same position k:
+
+\begin{lstlisting}[style=py,literate={∨}{{$\vee$}}1{∧}{{$\wedge$}}1{¬}{{$\neg$}}1]
+(¬pos(1,1) ∨ ¬pos(2,1))
+ ∧ (¬pos(1,1) ∨ ¬pos(3,1))
+ ∧ (¬pos(1,1) ∨ ¬pos(4,1))
+ ∧ (¬pos(2,1) ∨ ¬pos(3,1))
+ ∧ (¬pos(2,1) ∨ ¬pos(4,1))
+ ∧ (¬pos(3,1) ∨ ¬pos(4,1))
+ \end{lstlisting}
+
+
+ Now. with constrain number 2, we are making sure that the same vertex is not used in 2 spots of the clique at the same time.\\
+ So vertex number 3 cannot be in spot 1 and spot 2 of the clique.\\
+ So we get:
+ \begin{lstlisting}[style=py,literate={∨}{{$\vee$}}1{∧}{{$\wedge$}}1{¬}{{$\neg$}}1]
+(¬pos(1,1) ∨ ¬pos(1,2))
+∧ (¬pos(2,1) ∨ ¬pos(2,2))
+∧ (¬pos(3,1) ∨ ¬pos(3,2))
+∧ (¬pos(4,1) ∨ ¬pos(4,2))
+ \end{lstlisting}
+
+ Lastly, the 3rd constrain will make sure that only pairs of adjacent vertices are selected in different slots.
+
+So if for example there is no (1,3) edge we will have:
+
+ \begin{lstlisting}[style=py,literate={∨}{{$\vee$}}1{∧}{{$\wedge$}}1{¬}{{$\neg$}}1]
+(¬pos(1,1) ∨ ¬pos(3,2))
+∧ (¬pos(1,2) ∨ ¬pos(3,1))
+ \end{lstlisting}
+
+
 \section*{How the rules deliver the answer}
 \begin{description}
   \item[If the formula is \emph{satisfiable}.]  
@@ -135,5 +186,28 @@ Rule C adds the mutual-adjacency requirement, turning that $k$-set into a clique
 
 Thus the clause set is satisfiable exactly when $G$ contains a $k$-clique.
 
-\section*{What could we have done differently?}
+\section*{What could we have done differently and Challenges}
+
+The first 2 constraints were pretty straightforward to theorize and implement, but at the beginning in the first constrain there wasnt the line  "clauses.append([getVarNumber(vertex=v, slot=pos)
+for v in closed\_range(1, n)])" .
+
+We chose to add it later as it prevents some errors, as otherwise it would be possible for no vertex to be assigned to a given slot, which would allow the SAT solver to return sat when the clique has fewer than k nodes, making an error.
+
+For 3rd constrain, which is the main one, is slightly more complex but not too much as we just need to look for edges that we dont have. But ultimately it was quite easy and at the end we just needed to review some loops and do slight changes.
+
+
+
+
+
+\section*{GUI}
+
+For GUI we used Tailwind-CSS and made a drag-and-drop interface, backed by Flask.
+
+For the GUI, at the beginning we had problems with the graphical representation of the graph, especially with big ones, but after finding about sigma.js everything went smooth.
+
+
+
+
+
+
 \end{document}
