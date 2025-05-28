@@ -2,5 +2,6 @@
 .venv~/
 __pycache__/
 .vscode/
-*/*/tmp_prob.cnf
+**.cnf
+sat-projects/k-clique/tmp_prob.cnf
 **.pptx
