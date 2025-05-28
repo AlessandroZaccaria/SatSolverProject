@@ -34,7 +34,7 @@ def solve():
             for _ in range(m):
                 a, b = map(int, f.readline().split())
                 edges.append((a, b))
-        points = sorted({v for e in edges for v in e})
+        points = list(range(1,n+1))
 
         # run solver
         proc = subprocess.run(
